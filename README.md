@@ -1,2 +1,2 @@
 # STM32_Measurements
-Microcontroller based Frequency counter with ADC and DAC
+Microcontroller based Frequency counter, ADC and DAC with Python interfacing.
