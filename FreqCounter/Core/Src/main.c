@@ -236,7 +236,7 @@ int main(void)
 
 	  if (TIM5_done){
 		TIM5_done = 0;
-		uint8_t data[8];
+		uint8_t data[12];
 		ADCAvg = 0;
 		ADC3Avg = 0;
 		for (uint i = 0; i<4; i++){
@@ -246,8 +246,8 @@ int main(void)
 		//CDC_Transmit_FS((uint8_t*)&squareWaveFrequency,sizeof(squareWaveFrequency));
 		if (ADC_done){
 			ADC_done = 0;
-			HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
 			ADCAvg = ADC_avg(ADCVal);
+			HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
 			voltageValue = ADCAvg/4096*3.3;
 		}
 //		ADCAvg = Avg_avg(allAvg);
@@ -255,15 +255,18 @@ int main(void)
 
 		if (ADC3_done){
 			ADC3_done = 0;
-			HAL_ADC_Start_DMA(&hadc3, (uint16_t*)ADC3Val, ADC_BUFF);
 			ADC3Avg = ADC_avg3(ADC3Val);
-
+			HAL_ADC_Start_DMA(&hadc3, (uint16_t*)ADC3Val, ADC_BUFF);
 		}
 		uint8_t *bytes = (uint8_t *)&ADCAvg;
 		for (uint i = 0; i < 4; i++) {
 				data[i+4] = bytes[i];
 		}
-		CDC_Transmit_FS(data, 8);
+		uint8_t *bytes3 = (uint8_t *)&ADC3Avg;
+		for (uint i = 0; i < 4; i++) {
+				data[i+8] = bytes3[i];
+		}
+		CDC_Transmit_FS(data, 12);
 	  }
 
   }

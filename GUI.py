@@ -288,21 +288,22 @@ class Ui(QtWidgets.QMainWindow):
         # Read data from MCU
 
         # ---- Get vP, vN, vRef, and temperature from Timer1 readings
-        data_input = ser.read(8)
+        data_input = ser.read(12)
         ser.reset_input_buffer()
         ser.flush()
         vref = float(self.lineEdit_vin.text())
         data_int = np.frombuffer(data_input,dtype = np.uint32)
         data_int = list(data_int)
         data_int[1] = struct.unpack('f', struct.pack('I', data_int[1]))[0]
+        data_int[2] = struct.unpack('f', struct.pack('I', data_int[2]))[0]
         # print(data_int)
 
         freq = data_int[0]
 
         ampl = 3.3*(data_int[1])/4096
-        direct_ampl = ampl
+        direct_ampl = 3.3*(data_int[2])/4096
         adjust_ampl = vref+(ampl-vref)/12
-        print("Measured frequency:",freq,", Adjusted Ampl:", adjust_ampl, ", received ampl:", direct_ampl, ', vref:', vref)
+        print("Measured frequency:",freq,", Adjusted Ampl:", adjust_ampl, ", direct ampl:", direct_ampl, ', vref:', vref)
 
         #print(current)
         
