@@ -252,7 +252,7 @@ class Ui(QtWidgets.QMainWindow):
 
         # originally defined in "Square_Clicked"
 
-        global MODE, Freq, Ampl       # just use
+        global MODE, Freq, Ampl, DirectAmpl       # just use
 
         global saveDataInterval, avgLength    # just use
 
@@ -315,6 +315,8 @@ class Ui(QtWidgets.QMainWindow):
         Freq[avg_index] = freq
 
         Ampl[avg_index] = ampl
+        
+        DirectAmpl[avg_index] = direct_ampl
 
         change_time = datetime.now() - prev_time
 
@@ -323,6 +325,10 @@ class Ui(QtWidgets.QMainWindow):
         toPlot = Ampl[avgLength:]
 
         mean_ampl = np.mean(toPlot[toPlot!=0])      # average the latest 10 data => MAKE THIS PROGRAMMABLE
+        
+        toPlot = DirectAmpl[avgLength:]
+
+        mean_direct_ampl = np.mean(toPlot[toPlot!=0])      # average the latest 10 data => MAKE THIS PROGRAMMABLE
 
         toPlot = Freq[avgLength:]
 
@@ -332,7 +338,7 @@ class Ui(QtWidgets.QMainWindow):
 
         if countDisplay == 2:  # update every 4 * 50ms = 200ms (5/sec)
 
-            data = np.array([mean_ampl, mean_freq, currentSOC])
+            data = np.array([mean_ampl, mean_direct_ampl, mean_freq, currentSOC])
 
             self.display_Update(data)
 
@@ -350,7 +356,7 @@ class Ui(QtWidgets.QMainWindow):
 
             if countSaveData == saveDataInterval:
 
-                data = np.array([mean_ampl, mean_freq, currentSOC])
+                data = np.array([mean_ampl, mean_direct_ampl, mean_freq, currentSOC])
 
                 self.append_Data(data)
 
@@ -381,9 +387,11 @@ class Ui(QtWidgets.QMainWindow):
 
         amplitude = data[0]     # measured amplitude
 
-        frequency = data[1]               # measured frequency
+        direct_amplitude = data[1]
 
-        currentSOC = data[2]
+        frequency = data[2]               # measured frequency
+
+        currentSOC = data[3]
 
         # ---- Update Text
 
@@ -402,6 +410,8 @@ class Ui(QtWidgets.QMainWindow):
         # --------- Update yData array
 
         yData1 = np.append(yData1, amplitude)        # voltage
+
+        yData2 = np.append(yData2,direct_amplitude)
 
         yData4 = np.append(yData4, frequency)    # frequency        
 
@@ -435,6 +445,7 @@ class Ui(QtWidgets.QMainWindow):
 
 
         lines1.set_ydata(yData1)
+        lines1.set_ydata(yData2)                            #TODO: check this, no clue if this is doing what I want it to do
 
         newxlims = np.linspace(soc,currentSOC, len(yData4))
 
@@ -531,9 +542,8 @@ class Ui(QtWidgets.QMainWindow):
 
         # Append to file
 
-        # ------------ Vbattry, Ibattry, Iset, Temperature, Time
 
-        dataSave = [timeS, data[0], data[1], data[2]]
+        dataSave = [timeS, data[0], data[1], data[2], data[3]]
 
         dataFrame1 = pd.DataFrame([dataSave])
 
@@ -613,7 +623,7 @@ class Ui(QtWidgets.QMainWindow):
 
         global countCVMode, iStep, countDisplay, countTime, countSaveData, saveDataInterval, avgLength
 
-        global Freq, Ampl
+        global Freq, Ampl, DirectAmpl
 
         global refTimeStr
 
@@ -635,9 +645,11 @@ class Ui(QtWidgets.QMainWindow):
 
         avgLength = saveDataInterval*(-1)
 
-        Freq = [0 for x in range(saveDataInterval)] 
+        Freq = [0 for _ in range(saveDataInterval)] 
 
-        Ampl = [0 for x in range(saveDataInterval)]
+        Ampl = [0 for _ in range(saveDataInterval)]
+
+        DirectAmpl = [0 for _ in range(saveDataInterval)]
 
         refTimeStr = datetime.now()
 
@@ -654,6 +666,8 @@ class Ui(QtWidgets.QMainWindow):
         # ------------ create empty arrays and read manual x-span
 
         yData1 = np.array([])  # amplitude
+        
+        yData2 = np.array([])  # direct amplitude
 
         yData4 = np.array([])  # frequency
 
