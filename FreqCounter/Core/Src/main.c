@@ -37,7 +37,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define ADC_BUFF 7000
+#define ADC_BUFF 5000
 //#define AVG_ARRAY_SIZE 100
 
 /* USER CODE END PD */
@@ -65,10 +65,15 @@ __IO uint16_t ADC3Val[ADC_BUFF];
 //float allAvg[AVG_ARRAY_SIZE];
 float ADCAvg;
 float ADC3Avg;
+
+float ADCtot;
+float ADC3tot;
+int numVal, numVal3;
+
 float voltageValue;
-__IO uint8_t ADC_done;
-__IO uint8_t ADC3_done;
-__IO uint8_t TIM5_done;
+__IO uint8_t ADCDone;
+__IO uint8_t ADC3Done;
+__IO uint8_t TIM5Done;
 int16_t DAC_Value;
 //uint32_t avg_index;
 uint8_t init_values[8]= {0};
@@ -89,7 +94,7 @@ static void MX_ADC3_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 static float ADC_avg(uint32_t *values);
-static float ADC_avg3(uint16_t *values);
+static float ADC3_avg(uint16_t *values);
 //static float Avg_avg(uint32_t *values);
 //void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim);
 /* USER CODE END PFP */
@@ -135,20 +140,21 @@ int main(void)
   MX_ADC3_Init();
   /* USER CODE BEGIN 2 */
 
-
   HAL_TIM_Base_Start_IT(&htim5);
   HAL_TIM_Base_Start(&htim2);
-  ADC_done = 0;
-  ADC3_done = 0;
-  TIM5_done = 0;
+  ADCDone = 0;
+  ADC3Done = 0;
+  TIM5Done = 0;
   ADCAvg = 0;
   ADC3Avg = 0;
+
+  ADCtot = 0;
+  ADC3tot = 0;
+  numVal = 0;
+  numVal3 = 0;
+
   voltageValue = 0;
   error=0;
-//  avg_index = 0;
-//  Avg_avg(allAvg);
-
-  //countUp = 0;
 
   HAL_DAC_Start(&hdac2, DAC_CHANNEL_1);
   HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
@@ -171,8 +177,8 @@ int main(void)
 		do{
 			receivedValue = 0;
 			  // process ADC data
-			if (ADC_done){
-				ADC_done = 0;
+			if (ADCDone){
+				ADCDone = 0;
 				ADCAvg = ADC_avg(ADCVal);
 				DAC_Value += (2048-ADCAvg)/10;
 				//DAC_Value += (2048-DAC_Value)/10;
@@ -202,8 +208,8 @@ int main(void)
 	if (receivedValue>4100){
 		DAC_Value = receivedValue - 4200;
 		HAL_DAC_SetValue(&hdac2, DAC_CHANNEL_1, DAC_ALIGN_12B_R, (uint32_t)DAC_Value);
-		if(ADC_done) {
-		  ADC_done = 0;
+		if(ADCDone) {
+		  ADCDone = 0;
 		  receivedValue = 0;
 		  // process ADC data
 		  HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
@@ -226,16 +232,21 @@ int main(void)
 		  receivedValue = 0;
 	  }
 
-//	if (ADC_done){
-//		ADC_done = 0;
-//		HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
-//		ADCAvg = ADC_avg(ADCVal);
-//		allAvg[avg_index] = ADCAvg;
-//		avg_index++;
-//	}
+	if (ADCDone){
+		ADCDone = 0;
+		ADCAvg = ADC_avg(ADCVal);
+		ADCtot += ADCAvg;
+		numVal++;
+	}
+	if (ADC3Done){
+		ADCDone = 0;
+		ADC3Avg = ADC3_avg(ADC3Val);
+		ADC3tot += ADC3Avg;
+		numVal3++;
+	}
 
-	  if (TIM5_done){
-		TIM5_done = 0;
+	  if (TIM5Done){
+		TIM5Done = 0;
 		uint8_t data[12];
 		ADCAvg = 0;
 		ADC3Avg = 0;
@@ -244,8 +255,8 @@ int main(void)
 		}
 //        count++;
 		//CDC_Transmit_FS((uint8_t*)&squareWaveFrequency,sizeof(squareWaveFrequency));
-		if (ADC_done){
-			ADC_done = 0;
+		if (ADCDone){
+			ADCDone = 0;
 			ADCAvg = ADC_avg(ADCVal);
 			HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
 			voltageValue = ADCAvg/4096*3.3;
@@ -253,9 +264,9 @@ int main(void)
 //		ADCAvg = Avg_avg(allAvg);
 //		avg_index = 0;
 
-		if (ADC3_done){
-			ADC3_done = 0;
-			ADC3Avg = ADC_avg3(ADC3Val);
+		if (ADC3Done){
+			ADC3Done = 0;
+			ADC3Avg = ADC3_avg(ADC3Val);
 			HAL_ADC_Start_DMA(&hadc3, (uint16_t*)ADC3Val, ADC_BUFF);
 		}
 		uint8_t *bytes = (uint8_t *)&ADCAvg;
@@ -629,55 +640,36 @@ static void MX_GPIO_Init(void)
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * AdcHandle) {
 	if (AdcHandle->Instance == ADC2){
-		ADC_done = 1;
+		ADCDone = 1;
 		HAL_ADC_Stop_DMA(&hadc2);
 	} if (AdcHandle->Instance == ADC3){
-		ADC3_done = 1;
+		ADC3Done = 1;
 		HAL_ADC_Stop_DMA(&hadc3);
 	}
 }
-
-		/*void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-			if (htim->Instance == TIM2) {
-				testvar3++;
-				// External square wave frequency measurement
-				//squareWaveFrequency = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-				// Additional processing if needed
-			}
-		}*/
 
 static float ADC_avg(uint32_t *values){
 	uint32_t average = 0;
 	for (uint i=0; i<ADC_BUFF;i++){
 		average+=values[i];
 	}
+	HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
 	return(average*1.0/ADC_BUFF);
 }
 
-static float ADC_avg3(uint16_t *values){
+static float ADC3_avg(uint16_t *values){
 	uint32_t average = 0;
 	for (uint i=0; i<ADC_BUFF;i++){
 		average+=values[i];
 	}
+	HAL_ADC_Start_DMA(&hadc3, (uint16_t*)ADC3Val, ADC_BUFF);
 	return(average*1.0/ADC_BUFF);
 }
 
-//static float Avg_avg(uint32_t *values){
-//	uint32_t average = 0;
-//	uint32_t num = 0;
-//	for (uint i=0; i<AVG_ARRAY_SIZE;i++){
-//		if (values[i]>0){
-//			average+=values[i];
-//			num++;
-//		}
-//		values[i] = 0;
-//	}
-//	return(average*1.0/num);
-//}
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM5) {
-    		TIM5_done = 1;
+    		TIM5Done = 1;
     		squareWaveFrequency=__HAL_TIM_GET_COUNTER(&htim2)*(0.999962251);
     		__HAL_TIM_SET_COUNTER(&htim2, 0);
     		__HAL_TIM_SET_COUNTER(&htim5, 0);
