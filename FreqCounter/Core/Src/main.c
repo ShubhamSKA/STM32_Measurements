@@ -158,8 +158,7 @@ int main(void)
 
   HAL_DAC_Start(&hdac2, DAC_CHANNEL_1);
   HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
-  if (HAL_ADC_Start_DMA(&hadc3, (uint16_t*)ADC3Val, ADC_BUFF)!=HAL_OK)
-	  error=3;
+  HAL_ADC_Start_DMA(&hadc3, (uint16_t*)ADC3Val, ADC_BUFF);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -239,35 +238,29 @@ int main(void)
 		numVal++;
 	}
 	if (ADC3Done){
-		ADCDone = 0;
+		ADC3Done = 0;
 		ADC3Avg = ADC3_avg(ADC3Val);
 		ADC3tot += ADC3Avg;
 		numVal3++;
 	}
 
 	  if (TIM5Done){
+		HAL_ADC_Stop_DMA(&hadc2);
+		HAL_ADC_Stop_DMA(&hadc3);
+
 		TIM5Done = 0;
 		uint8_t data[12];
-		ADCAvg = 0;
-		ADC3Avg = 0;
 		for (uint i = 0; i<4; i++){
 			data[i] = (uint8_t)((squareWaveFrequency >> (8*i)) & 0xFF);
 		}
-//        count++;
-		//CDC_Transmit_FS((uint8_t*)&squareWaveFrequency,sizeof(squareWaveFrequency));
-		if (ADCDone){
-			ADCDone = 0;
-			ADCAvg = ADC_avg(ADCVal);
-			HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
-			voltageValue = ADCAvg/4096*3.3;
-		}
-//		ADCAvg = Avg_avg(allAvg);
-//		avg_index = 0;
+		if ((numVal!=0) && (numVal3!=0)){
+			ADCAvg = ADCtot/numVal;
+			ADC3Avg = ADC3tot/numVal3;
 
-		if (ADC3Done){
-			ADC3Done = 0;
-			ADC3Avg = ADC3_avg(ADC3Val);
-			HAL_ADC_Start_DMA(&hadc3, (uint16_t*)ADC3Val, ADC_BUFF);
+			ADCtot = 0;
+			ADC3tot = 0;
+			numVal = 0;
+			numVal3 = 0;
 		}
 		uint8_t *bytes = (uint8_t *)&ADCAvg;
 		for (uint i = 0; i < 4; i++) {
@@ -278,6 +271,8 @@ int main(void)
 				data[i+8] = bytes3[i];
 		}
 		CDC_Transmit_FS(data, 12);
+		HAL_ADC_Start_DMA(&hadc2, (uint32_t*)ADCVal, ADC_BUFF);
+		HAL_ADC_Start_DMA(&hadc3, (uint16_t*)ADC3Val, ADC_BUFF);
 	  }
 
   }
